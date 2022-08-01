@@ -256,7 +256,9 @@ class BareSIP(Thread):
         self.do_command("/ausrc alsa,default")
 
     @staticmethod
-    def convert_audio(input_file, frame_rate: int, channels: int, outfile=None):
+    def convert_audio(
+        input_file: str, frame_rate: int, channels: int, outfile=None
+    ) -> tuple[str, int]:
         input_file = expanduser(input_file)
         sound = AudioSegment.from_file(input_file)
         sound += AudioSegment.silent(duration=500)
