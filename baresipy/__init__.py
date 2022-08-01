@@ -384,6 +384,7 @@ class BareSIP(Thread):
 
     def handle_ready(self) -> None:
         logger.info("Ready for instructions")
+        self.ready = True
 
     def handle_mic_muted(self) -> None:
         logger.info("Microphone muted")
