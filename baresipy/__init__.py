@@ -16,7 +16,6 @@ from responsive_voice import ResponsiveVoice
 
 import baresipy.config
 import baresipy.constants as const
-from baresipy.utils.log import LOG
 
 logging.getLogger("urllib3.connectionpool").setLevel("WARN")
 logging.getLogger("pydub.converter").setLevel("WARN")
@@ -64,7 +63,7 @@ class BareSIP(Thread):
         if isfile(join(self.config_path, "config")):
             with open(join(self.config_path, "config"), "r") as f:
                 self.config = f.read()
-            LOG.info("config loaded from " + self.config_path + "/config")
+            logger.info("config loaded from " + self.config_path + "/config")
             self.updated_config = False
         else:
             self.config = baresipy.config.DEFAULT
@@ -88,7 +87,7 @@ class BareSIP(Thread):
             with open(join(self.config_path, "config.bak"), "w") as f:
                 f.write(self._original_config)
 
-            LOG.info("saving config")
+            logger.info("saving config")
             with open(join(self.config_path, "config"), "w") as f:
                 f.write(self.config)
 
@@ -129,59 +128,59 @@ class BareSIP(Thread):
             action = str(action)
             self.baresip.sendline(action)
         else:
-            LOG.warning(action + " not executed!")
-            LOG.error("NOT READY! please wait")
+            logger.warning(action + " not executed!")
+            logger.error("NOT READY! please wait")
 
     def create_user_agent(self) -> None:
         logger.info("Adding account to baresip: %s", self._identity.sip)
         self.baresip.sendline("/uanew " + self._identity.sip)
 
     def call(self, number):
-        LOG.info("Dialing: " + number)
+        logger.info("Dialing: " + number)
         self.do_command("/dial " + number)
 
     def hang(self) -> None:
         if self.current_call:
-            LOG.info("Hanging: " + self.current_call)
+            logger.info("Hanging: " + self.current_call)
             self.do_command("/hangup")
             self.current_call = None
             self._call_status = const.CallStatus.NONE
         else:
-            LOG.error("No active call to hang")
+            logger.error("No active call to hang")
 
     def hold(self) -> None:
         if self.current_call:
-            LOG.info("Holding: " + self.current_call)
+            logger.info("Holding: " + self.current_call)
             self.do_command("/hold")
         else:
-            LOG.error("No active call to hold")
+            logger.error("No active call to hold")
 
     def resume(self) -> None:
         if self.current_call:
-            LOG.info("Resuming: " + self.current_call)
+            logger.info("Resuming: " + self.current_call)
             self.do_command("/resume")
         else:
-            LOG.error("No active call to resume")
+            logger.error("No active call to resume")
 
     def mute_mic(self) -> None:
         if not self.call_established:
-            LOG.error("Cannot mute microphone while not in a call")
+            logger.error("Cannot mute microphone while not in a call")
             return
         if not self.mic_muted:
-            LOG.info("Muting mic")
+            logger.info("Muting mic")
             self.do_command("/mute")
         else:
-            LOG.info("Mic already muted")
+            logger.info("Mic already muted")
 
     def unmute_mic(self) -> None:
         if not self.call_established:
-            LOG.error("Cannot unmute microphone while not in a call")
+            logger.error("Cannot unmute microphone while not in a call")
             return
         if self.mic_muted:
-            LOG.info("Unmuting mic")
+            logger.info("Unmuting mic")
             self.do_command("/mute")
         else:
-            LOG.info("Mic already unmuted")
+            logger.info("Mic already unmuted")
 
     def accept_call(self) -> None:
         self.do_command("/accept")
@@ -197,10 +196,10 @@ class BareSIP(Thread):
 
     def quit(self) -> None:
         if self.updated_config:
-            LOG.info("restoring original config")
+            logger.info("restoring original config")
             with open(join(self.config_path, "config"), "w") as f:
                 f.write(self._original_config)
-        LOG.info("Exiting")
+        logger.info("Exiting")
         if self.running:
             if self.current_call:
                 self.hang()
@@ -216,28 +215,28 @@ class BareSIP(Thread):
         number = str(number)
         for n in number:
             if n not in range(0, 9):
-                LOG.error("invalid dtmf tone")
+                logger.error("invalid dtmf tone")
                 return
-        LOG.info("Sending DTMF tones for " + number)
+        logger.info("Sending DTMF tones for " + number)
         dtmf = join(tempfile.gettempdir(), number + ".wav")
         ToneGenerator().dtmf_to_wave(number, dtmf)
         self.send_audio(dtmf)
 
     def speak(self, speech):
         if not self.call_established:
-            LOG.error("Speaking without an active call!")
+            logger.error("Speaking without an active call!")
         else:
-            LOG.info("Sending TTS for " + speech)
+            logger.info("Sending TTS for " + speech)
             self.send_audio(self.tts.get_mp3(speech))
             sleep(0.5)
 
     def send_audio(self, wav_file):
         if not self.call_established:
-            LOG.error("Can't send audio without an active call!")
+            logger.error("Can't send audio without an active call!")
             return
         wav_file, duration = self.convert_audio(wav_file)
         # send audio stream
-        LOG.info("transmitting audio")
+        logger.info("transmitting audio")
         self.do_command("/ausrc aufile," + wav_file)
         # wait till playback ends
         sleep(duration - 0.5)
@@ -263,7 +262,7 @@ class BareSIP(Thread):
     # this is played out loud over speakers
     def say(self, speech):
         if not self.call_established:
-            LOG.warning("Speaking without an active call!")
+            logger.warning("Speaking without an active call!")
         self.tts.say(speech, blocking=True)
 
     def play(self, audio_file, blocking=True):
@@ -288,21 +287,21 @@ class BareSIP(Thread):
 
     # events
     def handle_incoming_call(self, number):
-        LOG.info("Incoming call: " + number)
+        logger.info("Incoming call: " + number)
         if self.call_established:
-            LOG.info("already in a call, rejecting")
+            logger.info("already in a call, rejecting")
             sleep(0.1)
             self.do_command("b")
         else:
-            LOG.info("default behaviour, rejecting call")
+            logger.info("default behaviour, rejecting call")
             sleep(0.1)
             self.do_command("b")
 
     def handle_call_rejected(self, number):
-        LOG.info("Rejected incoming call: " + number)
+        logger.info("Rejected incoming call: " + number)
 
     def handle_call_timestamp(self, timestr):
-        LOG.info("Call time: " + timestr)
+        logger.info("Call time: " + timestr)
 
     def _handle_call_status(self, status: const.CallStatus) -> None:
 
@@ -350,41 +349,41 @@ class BareSIP(Thread):
         ...
 
     def handle_call_established(self) -> None:
-        LOG.info("Call established")
+        logger.info("Call established")
 
     def handle_call_ended(self, reason):
-        LOG.info("Call ended")
-        LOG.debug("Reason: " + reason)
+        logger.info("Call ended")
+        logger.debug("Reason: " + reason)
 
     def _handle_no_accounts(self) -> None:
         logger.debug("No accounts in baresip, creating one")
         self.create_user_agent()
 
     def handle_login_success(self) -> None:
-        LOG.info("Logged in!")
+        logger.info("Logged in!")
 
     def handle_login_failure(self) -> None:
-        LOG.error("Log in failed!")
+        logger.error("Log in failed!")
         self.quit()
 
     def handle_ready(self) -> None:
-        LOG.info("Ready for instructions")
+        logger.info("Ready for instructions")
 
     def handle_mic_muted(self) -> None:
-        LOG.info("Microphone muted")
+        logger.info("Microphone muted")
 
     def handle_mic_unmuted(self) -> None:
-        LOG.info("Microphone unmuted")
+        logger.info("Microphone unmuted")
 
     def handle_audio_stream_failure(self) -> None:
-        LOG.debug("Aborting call, maybe we reached voicemail?")
+        logger.debug("Aborting call, maybe we reached voicemail?")
         self.hang()
 
     def handle_dtmf_received(self, char, duration):
-        LOG.info("Received DTMF symbol '{0}' duration={1}".format(char, duration))
+        logger.info("Received DTMF symbol '{0}' duration={1}".format(char, duration))
 
     def handle_error(self, error):
-        LOG.error(error)
+        logger.error(error)
         if error == "failed to set audio-source (No such device)":
             self.handle_audio_stream_failure()
 
