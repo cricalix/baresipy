@@ -25,14 +25,14 @@ logger: logging.Logger = logging.getLogger(__name__)
 class BareSIP(Thread):
     def __init__(
         self,
-        user,
-        pwd,
-        gateway,
+        user: str,
+        pwd: str,
+        gateway: str,
         tts=None,
-        debug=False,
-        block=True,
-        config_path=None,
-        sounds_path=None,
+        debug: bool = False,
+        block: bool = True,
+        config_path: str | None = None,
+        sounds_path: str | None = None,
     ):
         config_path = config_path or join("~", ".baresipy")
         self.config_path = expanduser(config_path)
@@ -114,7 +114,7 @@ class BareSIP(Thread):
             LOG.warning(action + " not executed!")
             LOG.error("NOT READY! please wait")
 
-    def login(self):
+    def login(self) -> None:
         LOG.info("Adding account: " + self.user)
         self.baresip.sendline("/uanew " + self._login)
 
@@ -122,7 +122,7 @@ class BareSIP(Thread):
         LOG.info("Dialing: " + number)
         self.do_command("/dial " + number)
 
-    def hang(self):
+    def hang(self) -> None:
         if self.current_call:
             LOG.info("Hanging: " + self.current_call)
             self.do_command("/hangup")
@@ -131,21 +131,21 @@ class BareSIP(Thread):
         else:
             LOG.error("No active call to hang")
 
-    def hold(self):
+    def hold(self) -> None:
         if self.current_call:
             LOG.info("Holding: " + self.current_call)
             self.do_command("/hold")
         else:
             LOG.error("No active call to hold")
 
-    def resume(self):
+    def resume(self) -> None:
         if self.current_call:
             LOG.info("Resuming: " + self.current_call)
             self.do_command("/resume")
         else:
             LOG.error("No active call to resume")
 
-    def mute_mic(self):
+    def mute_mic(self) -> None:
         if not self.call_established:
             LOG.error("Cannot mute microphone while not in a call")
             return
@@ -155,7 +155,7 @@ class BareSIP(Thread):
         else:
             LOG.info("Mic already muted")
 
-    def unmute_mic(self):
+    def unmute_mic(self) -> None:
         if not self.call_established:
             LOG.error("Cannot unmute microphone while not in a call")
             return
@@ -165,11 +165,11 @@ class BareSIP(Thread):
         else:
             LOG.info("Mic already unmuted")
 
-    def accept_call(self):
+    def accept_call(self) -> None:
         self.do_command("/accept")
         self._handle_call_status(const.CallStatus.ESTABLISHED)
 
-    def list_calls(self):
+    def list_calls(self) -> None:
         self.do_command("/listcalls")
 
     def check_call_status(self) -> const.CallStatus:
@@ -177,7 +177,7 @@ class BareSIP(Thread):
         sleep(0.1)
         return self.call_status
 
-    def quit(self):
+    def quit(self) -> None:
         if self.updated_config:
             LOG.info("restoring original config")
             with open(join(self.config_path, "config"), "w") as f:
@@ -253,7 +253,7 @@ class BareSIP(Thread):
             audio_file, duration = self.convert_audio(audio_file)
         self.audio = self._play_wav(audio_file, blocking=blocking)
 
-    def stop_playing(self):
+    def stop_playing(self) -> None:
         if self.audio is not None:
             self.audio.kill()
 
@@ -305,42 +305,60 @@ class BareSIP(Thread):
         """Executed when a call status change is detected."""
         ...
 
-    def handle_call_start(self):
-        number = self.current_call
-        LOG.info("Calling: " + number)
+    def _handle_call_start(self) -> None:
+        """Internal method for handling a current call"""
+        if self.current_call:
+            logger.info("Calling: %s", self.current_call)
+            self.handle_call_start(error=False)
+        else:
+            logger.error("In call startup, but self.current_call is None")
+            self.handle_call_start(error=True)
 
-    def handle_call_ringing(self):
-        number = self.current_call
-        LOG.info(number + " is Ringing")
+    def handle_call_start(self, error: bool) -> None:
+        """Executed when a call start is detected"""
+        ...
 
-    def handle_call_established(self):
+    def _handle_call_ringing(self) -> None:
+        """Internal method for handling a ringing current call"""
+        if self.current_call:
+            logger.info("Ringing: %s", self.current_call)
+            self.handle_call_ringing(error=False)
+        else:
+            logger.error("In call ringing, but self.current_call is None")
+            self.handle_call_ringing(error=True)
+
+    def handle_call_ringing(self, error: bool) -> None:
+        """Executed when a call ring is detected"""
+        ...
+
+    def handle_call_established(self) -> None:
         LOG.info("Call established")
 
     def handle_call_ended(self, reason):
         LOG.info("Call ended")
         LOG.debug("Reason: " + reason)
 
-    def _handle_no_accounts(self):
+    def _handle_no_accounts(self) -> None:
         LOG.debug("No accounts setup")
         self.login()
 
-    def handle_login_success(self):
+    def handle_login_success(self) -> None:
         LOG.info("Logged in!")
 
-    def handle_login_failure(self):
+    def handle_login_failure(self) -> None:
         LOG.error("Log in failed!")
         self.quit()
 
-    def handle_ready(self):
+    def handle_ready(self) -> None:
         LOG.info("Ready for instructions")
 
-    def handle_mic_muted(self):
+    def handle_mic_muted(self) -> None:
         LOG.info("Microphone muted")
 
-    def handle_mic_unmuted(self):
+    def handle_mic_unmuted(self) -> None:
         LOG.info("Microphone unmuted")
 
-    def handle_audio_stream_failure(self):
+    def handle_audio_stream_failure(self) -> None:
         LOG.debug("Aborting call, maybe we reached voicemail?")
         self.hang()
 
@@ -353,7 +371,7 @@ class BareSIP(Thread):
             self.handle_audio_stream_failure()
 
     # event loop
-    def run(self):
+    def run(self) -> None:
         self.running = True
         while self.running:
             try:
@@ -395,12 +413,12 @@ class BareSIP(Thread):
                         )
                         self.handle_call_rejected(num)
                     elif "call: SIP Progress: 180 Ringing" in out:
-                        self.handle_call_ringing()
+                        self._handle_call_ringing()
                         self._handle_call_status(const.CallStatus.RINGING)
                     elif "call: connecting to " in out:
                         n = out.split("call: connecting to '")[1].split("'")[0]
                         self.current_call = n
-                        self.handle_call_start()
+                        self._handle_call_start()
                         self._handle_call_status(const.CallStatus.OUTGOING)
                     elif "Call established:" in out:
                         self._handle_call_status(const.CallStatus.ESTABLISHED)
@@ -467,7 +485,7 @@ class BareSIP(Thread):
 
         self.quit()
 
-    def wait_until_ready(self):
+    def wait_until_ready(self) -> None:
         while not self.ready:
             sleep(0.1)
             if self.abort:
