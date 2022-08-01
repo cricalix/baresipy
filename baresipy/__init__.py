@@ -166,7 +166,6 @@ class BareSIP(Thread):
         self.do_command("/accept")
         status = "ESTABLISHED"
         self.handle_call_status(status)
-        self._call_status = status
 
     def list_calls(self):
         self.do_command("/listcalls")
@@ -286,8 +285,10 @@ class BareSIP(Thread):
         LOG.info("Call time: " + timestr)
 
     def handle_call_status(self, status):
+        """Hookable function for handling a specific status"""
         if status != self._call_status:
             LOG.debug("Call Status: " + status)
+        self._call_status = status
 
     def handle_call_start(self):
         number = self.current_call
@@ -382,30 +383,25 @@ class BareSIP(Thread):
                         self.handle_call_ringing()
                         status = "RINGING"
                         self.handle_call_status(status)
-                        self._call_status = status
                     elif "call: connecting to " in out:
                         n = out.split("call: connecting to '")[1].split("'")[0]
                         self.current_call = n
                         self.handle_call_start()
                         status = "OUTGOING"
                         self.handle_call_status(status)
-                        self._call_status = status
                     elif "Call established:" in out:
                         status = "ESTABLISHED"
                         self.handle_call_status(status)
-                        self._call_status = status
                         sleep(0.5)
                         self.handle_call_established()
                     elif "call: hold " in out:
                         n = out.split("call: hold ")[1]
                         status = "ON HOLD"
                         self.handle_call_status(status)
-                        self._call_status = status
                     elif "Call with " in out and "terminated (duration: " in out:
                         status = "DISCONNECTED"
                         duration = out.split("terminated (duration: ")[1][:-1]
                         self.handle_call_status(status)
-                        self._call_status = status
                         self.handle_call_timestamp(duration)
                         self.mic_muted = False
                     elif "call muted" in out:
@@ -418,17 +414,14 @@ class BareSIP(Thread):
                         reason = out.split("session closed:")[1].strip()
                         status = "DISCONNECTED"
                         self.handle_call_status(status)
-                        self._call_status = status
                         self.handle_call_ended(reason)
                         self.mic_muted = False
                     elif "(no active calls)" in out:
                         status = "DISCONNECTED"
                         self.handle_call_status(status)
-                        self._call_status = status
                     elif "===== Call debug " in out:
                         status = out.split("(")[1].split(")")[0]
                         self.handle_call_status(status)
-                        self._call_status = status
                     elif "--- List of active calls (1): ---" in self._prev_output:
                         if "ESTABLISHED" in out and self.current_call in out:
                             ts = (
