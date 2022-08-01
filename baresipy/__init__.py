@@ -1,3 +1,4 @@
+import copy
 import dataclasses as dc
 import logging
 import re
@@ -42,7 +43,7 @@ class Identity:
         """Returns the identity as a sip: address string with flags"""
         # Assign to self so this code doesn't end up putting auth_pass in the flags
         # repeatedly
-        flags = self.flags
+        flags = copy.copy(self.flags)
         flags.append(f"auth_pass={self.password}")
         return f"sip:{self.user}@{self.gateway}:{self.port};{';'.join(flags)}"
 
