@@ -53,9 +53,17 @@ class BareSIP(Thread):
         identity: Identity,
         tts=None,
         block: bool = True,
+        frame_rate: int = 8000,
+        channels: int = 1,
         config_path: str | None = None,
         sounds_path: str | None = None,
     ):
+        """BareSIP is a Thread that automatically runs baresip via pexpect
+
+        The send_audio method is configured with:
+        * frame_rate: Defaults to 8kHz, as that's the most compatible
+        * channels: Defaults to mono audio, as that's the most compatible
+        """
         config_path = config_path or join("~", ".baresipy")
         self.config_path = expanduser(config_path)
         if not isdir(self.config_path):
@@ -97,6 +105,8 @@ class BareSIP(Thread):
             self.tts = ResponsiveVoice(gender=ResponsiveVoice.MALE)
 
         self._identity = identity
+        self._frame_rate = frame_rate
+        self._channels = channels
         self._prev_output = ""
         self.running: bool = False
         self.ready: bool = False
@@ -234,7 +244,9 @@ class BareSIP(Thread):
         if not self.call_established:
             logger.error("Can't send audio without an active call!")
             return
-        wav_file, duration = self.convert_audio(wav_file)
+        wav_file, duration = self.convert_audio(
+            wav_file, frame_rate=self._frame_rate, channels=self._channels
+        )
         # send audio stream
         logger.info("transmitting audio")
         self.do_command("/ausrc aufile," + wav_file)
@@ -244,7 +256,7 @@ class BareSIP(Thread):
         self.do_command("/ausrc alsa,default")
 
     @staticmethod
-    def convert_audio(input_file, outfile=None):
+    def convert_audio(input_file, frame_rate: int, channels: int, outfile=None):
         input_file = expanduser(input_file)
         sound = AudioSegment.from_file(input_file)
         sound += AudioSegment.silent(duration=500)
@@ -254,8 +266,8 @@ class BareSIP(Thread):
             sound += AudioSegment.silent(duration=500)
 
         outfile = outfile or join(tempfile.gettempdir(), "pybaresip.wav")
-        sound = sound.set_frame_rate(48000)
-        sound = sound.set_channels(2)
+        sound = sound.set_frame_rate(frame_rate)
+        sound = sound.set_channels(channels)
         sound.export(outfile, format="wav")
         return outfile, sound.duration_seconds
 
