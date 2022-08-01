@@ -40,8 +40,12 @@ class Identity:
 
     @property
     def sip(self) -> str:
-        self.flags.append(f"auth_pass={self.password}")
-        return f"sip:{self.user}@{self.gateway}:{self.port};{';'.join(self.flags)}"
+        """Returns the identity as a sip: address string with flags"""
+        # Assign to self so this code doesn't end up putting auth_pass in the flags
+        # repeatedly
+        flags = self.flags
+        flags.append(f"auth_pass={self.password}")
+        return f"sip:{self.user}@{self.gateway}:{self.port};{';'.join(flags)}"
 
 
 class BareSIP(Thread):
