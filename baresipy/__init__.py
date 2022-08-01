@@ -116,7 +116,7 @@ class BareSIP(Thread):
         self.baresip.sendline("/uanew " + self._login)
 
     def call(self, number):
-        LOG.info("Dialling: " + number)
+        LOG.info("Dialing: " + number)
         self.do_command("/dial " + number)
 
     def hang(self):
@@ -137,14 +137,14 @@ class BareSIP(Thread):
 
     def resume(self):
         if self.current_call:
-            LOG.info("Resuming " + self.current_call)
+            LOG.info("Resuming: " + self.current_call)
             self.do_command("/resume")
         else:
             LOG.error("No active call to resume")
 
     def mute_mic(self):
         if not self.call_established:
-            LOG.error("Can not mute microphone while not in a call")
+            LOG.error("Cannot mute microphone while not in a call")
             return
         if not self.mic_muted:
             LOG.info("Muting mic")
@@ -154,7 +154,7 @@ class BareSIP(Thread):
 
     def unmute_mic(self):
         if not self.call_established:
-            LOG.error("Can not unmute microphone while not in a call")
+            LOG.error("Cannot unmute microphone while not in a call")
             return
         if self.mic_muted:
             LOG.info("Unmuting mic")
@@ -196,10 +196,10 @@ class BareSIP(Thread):
     def send_dtmf(self, number):
         number = str(number)
         for n in number:
-            if n not in "0123456789":
+            if n not in range(0, 9):
                 LOG.error("invalid dtmf tone")
                 return
-        LOG.info("Sending dtmf tones for " + number)
+        LOG.info("Sending DTMF tones for " + number)
         dtmf = join(tempfile.gettempdir(), number + ".wav")
         ToneGenerator().dtmf_to_wave(number, dtmf)
         self.send_audio(dtmf)
@@ -391,7 +391,6 @@ class BareSIP(Thread):
                         self.handle_call_status(status)
                         self._call_status = status
                     elif "Call established:" in out:
-
                         status = "ESTABLISHED"
                         self.handle_call_status(status)
                         self._call_status = status
