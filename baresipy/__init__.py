@@ -1,3 +1,4 @@
+import dataclasses as dc
 import logging
 import re
 import signal
@@ -22,14 +23,32 @@ logging.getLogger("pydub.converter").setLevel("WARN")
 logger: logging.Logger = logging.getLogger(__name__)
 
 
+@dc.dataclass
+class Identity:
+    """An Account is the configuration for an identity used to make calls.
+
+    If you want to suppress registration, add 'regint=0' to flags.
+
+    The password is automatically migrated to the flags as 'auth_pass=<password>'
+    """
+
+    user: str
+    password: str
+    gateway: str
+    flags: list[str]
+    port: int = 5060
+
+    @property
+    def sip(self) -> str:
+        self.flags.append(f"auth_pass={self.password}")
+        return f"sip:{self.user}@{self.gateway}:{self.port};{';'.join(self.flags)}"
+
+
 class BareSIP(Thread):
     def __init__(
         self,
-        user: str,
-        pwd: str,
-        gateway: str,
+        identity: Identity,
         tts=None,
-        debug: bool = False,
         block: bool = True,
         config_path: str | None = None,
         sounds_path: str | None = None,
@@ -69,17 +88,12 @@ class BareSIP(Thread):
             with open(join(self.config_path, "config"), "w") as f:
                 f.write(self.config)
 
-        self.debug = debug
-        self.user = user
-        self.pwd = pwd
-        self.gateway = gateway
         if tts:
             self.tts = tts
         else:
             self.tts = ResponsiveVoice(gender=ResponsiveVoice.MALE)
-        self._login = "sip:{u}@{g};auth_pass={p}".format(
-            u=self.user, p=self.pwd, g=self.gateway
-        )
+
+        self._identity = identity
         self._prev_output = ""
         self.running: bool = False
         self.ready: bool = False
@@ -114,9 +128,9 @@ class BareSIP(Thread):
             LOG.warning(action + " not executed!")
             LOG.error("NOT READY! please wait")
 
-    def login(self) -> None:
-        LOG.info("Adding account: " + self.user)
-        self.baresip.sendline("/uanew " + self._login)
+    def create_user_agent(self) -> None:
+        logger.info("Adding account to baresip: %s", self._identity.sip)
+        self.baresip.sendline("/uanew " + self._identity.sip)
 
     def call(self, number):
         LOG.info("Dialing: " + number)
@@ -339,8 +353,8 @@ class BareSIP(Thread):
         LOG.debug("Reason: " + reason)
 
     def _handle_no_accounts(self) -> None:
-        LOG.debug("No accounts setup")
-        self.login()
+        logger.debug("No accounts in baresip, creating one")
+        self.create_user_agent()
 
     def handle_login_success(self) -> None:
         LOG.info("Logged in!")
@@ -379,8 +393,7 @@ class BareSIP(Thread):
 
                 if out != self._prev_output:
                     out = out.strip()
-                    if self.debug:
-                        LOG.debug(out)
+                    logger.debug("baresip> %s", out)
                     if "baresip is ready." in out:
                         self.handle_ready()
                     elif "account: No SIP accounts found" in out:
