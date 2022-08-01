@@ -1,27 +1,37 @@
+import logging
+import re
+import signal
+import subprocess
+import tempfile
+from os import makedirs
+from os.path import expanduser, isdir, isfile, join
+from threading import Thread
 from time import sleep
+
 import pexpect
 from opentone import ToneGenerator
-from responsive_voice import ResponsiveVoice
 from pydub import AudioSegment
-import tempfile
-import logging
-import subprocess
-from threading import Thread
-from baresipy.utils import create_daemon
-from baresipy.utils.log import LOG
+from responsive_voice import ResponsiveVoice
+
 import baresipy.config
-from os.path import expanduser, join, isfile, isdir
-from os import makedirs
-import signal
-import re
+from baresipy.utils.log import LOG
 
 logging.getLogger("urllib3.connectionpool").setLevel("WARN")
 logging.getLogger("pydub.converter").setLevel("WARN")
 
 
 class BareSIP(Thread):
-    def __init__(self, user, pwd, gateway, tts=None, debug=False,
-                 block=True, config_path=None, sounds_path=None):
+    def __init__(
+        self,
+        user,
+        pwd,
+        gateway,
+        tts=None,
+        debug=False,
+        block=True,
+        config_path=None,
+        sounds_path=None,
+    ):
         config_path = config_path or join("~", ".baresipy")
         self.config_path = expanduser(config_path)
         if not isdir(self.config_path):
@@ -42,12 +52,12 @@ class BareSIP(Thread):
             if sounds_path is False:
                 # sounds disabled
                 self.config = self.config.replace(
-                    "#audio_path		/usr/share/baresip",
-                    "audio_path		/dont/load")
+                    "#audio_path		/usr/share/baresip", "audio_path		/dont/load"
+                )
             elif isdir(sounds_path):
                 self.config = self.config.replace(
-                    "#audio_path		/usr/share/baresip",
-                    "audio_path		" + sounds_path)
+                    "#audio_path		/usr/share/baresip", "audio_path		" + sounds_path
+                )
 
         if self.updated_config:
             with open(join(self.config_path, "config.bak"), "w") as f:
@@ -65,8 +75,9 @@ class BareSIP(Thread):
             self.tts = tts
         else:
             self.tts = ResponsiveVoice(gender=ResponsiveVoice.MALE)
-        self._login = "sip:{u}@{g};auth_pass={p}".format(u=self.user, p=self.pwd,
-                                               g=self.gateway)
+        self._login = "sip:{u}@{g};auth_pass={p}".format(
+            u=self.user, p=self.pwd, g=self.gateway
+        )
         self._prev_output = ""
         self.running = False
         self.ready = False
@@ -76,7 +87,7 @@ class BareSIP(Thread):
         self._call_status = None
         self.audio = None
         self._ts = None
-        self.baresip = pexpect.spawn('baresip -f ' + self.config_path)
+        self.baresip = pexpect.spawn("baresip -f " + self.config_path)
         super().__init__()
         self.start()
         if block:
@@ -343,20 +354,29 @@ class BareSIP(Thread):
                     elif "All 1 useragent registered successfully!" in out:
                         self.ready = True
                         self.handle_login_success()
-                    elif "ua: SIP register failed:" in out or\
-                            "401 Unauthorized" in out or \
-                            "Register: Destination address required" in out or\
-                            "Register: Connection timed out" in out:
+                    elif (
+                        "ua: SIP register failed:" in out
+                        or "401 Unauthorized" in out
+                        or "Register: Destination address required" in out
+                        or "Register: Connection timed out" in out
+                    ):
                         self.handle_error(out)
                         self.handle_login_failure()
                     elif "Incoming call from: " in out:
-                        num = out.split("Incoming call from: ")[
-                            1].split(" - (press 'a' to accept)")[0].strip()
+                        num = (
+                            out.split("Incoming call from: ")[1]
+                            .split(" - (press 'a' to accept)")[0]
+                            .strip()
+                        )
                         self.current_call = num
                         self._call_status = "INCOMING"
                         self.handle_incoming_call(num)
                     elif "call: rejecting incoming call from " in out:
-                        num = out.split("rejecting incoming call from ")[1].split(" ")[0].strip()
+                        num = (
+                            out.split("rejecting incoming call from ")[1]
+                            .split(" ")[0]
+                            .strip()
+                        )
                         self.handle_call_rejected(num)
                     elif "call: SIP Progress: 180 Ringing" in out:
                         self.handle_call_ringing()
@@ -382,8 +402,7 @@ class BareSIP(Thread):
                         status = "ON HOLD"
                         self.handle_call_status(status)
                         self._call_status = status
-                    elif "Call with " in out and \
-                            "terminated (duration: " in out:
+                    elif "Call with " in out and "terminated (duration: " in out:
                         status = "DISCONNECTED"
                         duration = out.split("terminated (duration: ")[1][:-1]
                         self.handle_call_status(status)
@@ -411,24 +430,27 @@ class BareSIP(Thread):
                         status = out.split("(")[1].split(")")[0]
                         self.handle_call_status(status)
                         self._call_status = status
-                    elif "--- List of active calls (1): ---" in \
-                            self._prev_output:
+                    elif "--- List of active calls (1): ---" in self._prev_output:
                         if "ESTABLISHED" in out and self.current_call in out:
-                            ts = out.split("ESTABLISHED")[0].split(
-                                "[line 1]")[1].strip()
+                            ts = (
+                                out.split("ESTABLISHED")[0].split("[line 1]")[1].strip()
+                            )
                             if ts != self._ts:
                                 self._ts = ts
                                 self.handle_call_timestamp(ts)
                     elif "failed to set audio-source (No such device)" in out:
                         error = "failed to set audio-source (No such device)"
                         self.handle_error(error)
-                    elif "terminated by signal" in out or "ua: stop all" in \
-                            out:
+                    elif "terminated by signal" in out or "ua: stop all" in out:
                         self.running = False
                     elif "received DTMF:" in out:
-                        match = re.search('received DTMF: \'(.)\' \(duration=(\d+)\)', out)
+                        match = re.search(
+                            r"received DTMF: '(.)' \(duration=(\d+)\)", out
+                        )
                         if match:
-                            self.handle_dtmf_received(match.group(1), int(match.group(2)))
+                            self.handle_dtmf_received(
+                                match.group(1), int(match.group(2))
+                            )
                     self._prev_output = out
             except pexpect.exceptions.EOF:
                 # baresip exited
@@ -446,4 +468,3 @@ class BareSIP(Thread):
             sleep(0.1)
             if self.abort:
                 return
-

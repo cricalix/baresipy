@@ -7,4 +7,3 @@ def create_daemon(target, args=(), kwargs=None):
     t.daemon = True
     t.start()
     return t
-

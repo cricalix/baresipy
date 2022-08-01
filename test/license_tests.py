@@ -7,15 +7,13 @@ from lichecker import LicenseChecker
 # manually verified and injected
 license_overrides = {
     "kthread": "MIT",
-    'yt-dlp': "Unlicense",
-    'pyxdg': 'GPL-2.0',
-    'ptyprocess': 'ISC license',
-    'psutil': 'BSD3'
+    "yt-dlp": "Unlicense",
+    "pyxdg": "GPL-2.0",
+    "ptyprocess": "ISC license",
+    "psutil": "BSD3",
 }
 # explicitly allow these packages that would fail otherwise
-whitelist = [
-    'idna'  # BSD-like
-]
+whitelist = ["idna"]  # BSD-like
 
 # validation flags
 allow_nonfree = False
@@ -30,14 +28,16 @@ pkg_name = "baresipy"
 class TestLicensing(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        licheck = LicenseChecker(pkg_name,
-                                 license_overrides=license_overrides,
-                                 whitelisted_packages=whitelist,
-                                 allow_ambiguous=allow_ambiguous,
-                                 allow_unlicense=allow_unlicense,
-                                 allow_unknown=allow_unknown,
-                                 allow_viral=allow_viral,
-                                 allow_nonfree=allow_nonfree)
+        licheck = LicenseChecker(
+            pkg_name,
+            license_overrides=license_overrides,
+            whitelisted_packages=whitelist,
+            allow_ambiguous=allow_ambiguous,
+            allow_unlicense=allow_unlicense,
+            allow_unknown=allow_unknown,
+            allow_viral=allow_viral,
+            allow_nonfree=allow_nonfree,
+        )
         print("Package", pkg_name)
         print("Version", licheck.version)
         print("License", licheck.license)

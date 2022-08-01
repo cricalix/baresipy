@@ -1,0 +1,6 @@
+[flake8]
+ignore =
+	# black is more tolerant
+	E501,
+	# Yeah, don't mind.
+	W503,

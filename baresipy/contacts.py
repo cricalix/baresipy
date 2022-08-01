@@ -1,14 +1,15 @@
-from json_database import JsonDatabase
-from os.path import expanduser, join, isdir
 from os import makedirs
+from os.path import expanduser, isdir, join
+
+from json_database import JsonDatabase
 
 
 class ContactExists(ValueError):
-    """ Choose new contact name """
+    """Choose new contact name"""
 
 
 class ContactDoesNotExist(ValueError):
-    """ Choose new contact name """
+    """Choose new contact name"""
 
 
 class ContactList:
@@ -43,8 +44,7 @@ class ContactList:
         with open(db_dir) as f:
             lines = f.readlines()
         for user in users:
-            line = "\"{name}\" <{address}>".format(name=user["name"],
-                                               address=user["url"])
+            line = '"{name}" <{address}>'.format(name=user["name"], address=user["url"])
             if line not in lines:
                 lines.append(line + "\n")
         with open(db_dir, "w") as f:

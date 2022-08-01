@@ -1,6 +1,6 @@
-from baresipy import BareSIP
 from time import sleep
 
+from baresipy import BareSIP
 
 gateway = "your_sip.gateway.net"
 user = "your_phone"

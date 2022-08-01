@@ -53,15 +53,14 @@ class LOG:
     @classmethod
     def init(cls):
         cls.level = "DEBUG"
-        fmt = '%(asctime)s.%(msecs)03d - ' \
-              '%(name)s - %(levelname)s - %(message)s'
-        datefmt = '%H:%M:%S'
+        fmt = "%(asctime)s.%(msecs)03d - " "%(name)s - %(levelname)s - %(message)s"
+        datefmt = "%H:%M:%S"
         formatter = logging.Formatter(fmt, datefmt)
         cls.handler = logging.StreamHandler(sys.stdout)
         cls.handler.setFormatter(formatter)
 
         # Enable logging in external modules
-        cls.create_logger('').setLevel(cls.level)
+        cls.create_logger("").setLevel(cls.level)
 
     @classmethod
     def create_logger(cls, name):
@@ -93,8 +92,8 @@ class LOG:
             # ...
             record = stack[2]
             mod = inspect.getmodule(record[0])
-            module_name = mod.__name__ if mod else ''
-            name = module_name + ':' + record[3] + ':' + str(record[2])
+            module_name = mod.__name__ if mod else ""
+            name = module_name + ":" + record[3] + ":" + str(record[2])
         func(cls.create_logger(name), *args, **kwargs)
 
 

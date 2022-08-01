@@ -1,6 +1,8 @@
-from baresipy import BareSIP
 from time import sleep
+
 from pyjokes import get_joke
+
+from baresipy import BareSIP
 
 
 class JokeBOT(BareSIP):
