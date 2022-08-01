@@ -145,7 +145,7 @@ class BareSIP(Thread):
         logger.info("Adding account to baresip: %s", self._identity.sip)
         self.baresip.sendline("/uanew " + self._identity.sip)
 
-    def call(self, number):
+    def call(self, number: str) -> None:
         logger.info("Dialing: " + number)
         self.do_command("/dial " + number)
 
@@ -221,18 +221,18 @@ class BareSIP(Thread):
         self.baresip.close()
         self.baresip.kill(signal.SIGKILL)
 
-    def send_dtmf(self, number):
-        number = str(number)
-        for n in number:
-            if n not in range(0, 9):
-                logger.error("invalid dtmf tone")
+    def send_dtmf(self, number: int) -> None:
+        s_number = str(number)
+        for n in s_number:
+            if int(n) not in range(0, 9):
+                logger.error("Invalid DTMF tone")
                 return
-        logger.info("Sending DTMF tones for " + number)
-        dtmf = join(tempfile.gettempdir(), number + ".wav")
+        logger.info("Sending DTMF tones for " + s_number)
+        dtmf = join(tempfile.gettempdir(), s_number + ".wav")
         ToneGenerator().dtmf_to_wave(number, dtmf)
         self.send_audio(dtmf)
 
-    def speak(self, speech):
+    def speak(self, speech: str) -> None:
         if not self.call_established:
             logger.error("Speaking without an active call!")
         else:
@@ -240,7 +240,7 @@ class BareSIP(Thread):
             self.send_audio(self.tts.get_mp3(speech))
             sleep(0.5)
 
-    def send_audio(self, wav_file):
+    def send_audio(self, wav_file: str) -> None:
         if not self.call_established:
             logger.error("Can't send audio without an active call!")
             return
@@ -274,14 +274,16 @@ class BareSIP(Thread):
         return outfile, sound.duration_seconds
 
     # this is played out loud over speakers
-    def say(self, speech):
+    def say(self, speech: str) -> None:
         if not self.call_established:
             logger.warning("Speaking without an active call!")
         self.tts.say(speech, blocking=True)
 
-    def play(self, audio_file, blocking=True):
+    def play(self, audio_file: str, blocking: bool = True) -> None:
         if not audio_file.endswith(".wav"):
-            audio_file, duration = self.convert_audio(audio_file)
+            audio_file, duration = self.convert_audio(
+                audio_file, frame_rate=self._frame_rate, channels=self._channels
+            )
         self.audio = self._play_wav(audio_file, blocking=blocking)
 
     def stop_playing(self) -> None:
@@ -300,7 +302,7 @@ class BareSIP(Thread):
             return subprocess.Popen(play_mp3_cmd)
 
     # events
-    def handle_incoming_call(self, number):
+    def handle_incoming_call(self, number: str) -> None:
         logger.info("Incoming call: " + number)
         if self.call_established:
             logger.info("already in a call, rejecting")
@@ -311,14 +313,13 @@ class BareSIP(Thread):
             sleep(0.1)
             self.do_command("b")
 
-    def handle_call_rejected(self, number):
+    def handle_call_rejected(self, number: str) -> None:
         logger.info("Rejected incoming call: " + number)
 
-    def handle_call_timestamp(self, timestr):
+    def handle_call_timestamp(self, timestr: str) -> None:
         logger.info("Call time: " + timestr)
 
     def _handle_call_status(self, status: const.CallStatus) -> None:
-
         self._previous_call_status = self._call_status
         self._call_status = status
         logger.debug(
@@ -365,7 +366,7 @@ class BareSIP(Thread):
     def handle_call_established(self) -> None:
         logger.info("Call established")
 
-    def handle_call_ended(self, reason):
+    def handle_call_ended(self, reason: str) -> None:
         logger.info("Call ended")
         logger.debug("Reason: " + reason)
 
@@ -393,10 +394,10 @@ class BareSIP(Thread):
         logger.debug("Aborting call, maybe we reached voicemail?")
         self.hang()
 
-    def handle_dtmf_received(self, char, duration):
+    def handle_dtmf_received(self, char: str, duration: int) -> None:
         logger.info("Received DTMF symbol '{0}' duration={1}".format(char, duration))
 
-    def handle_error(self, error):
+    def handle_error(self, error: str) -> None:
         logger.error(error)
         if error == "failed to set audio-source (No such device)":
             self.handle_audio_stream_failure()
